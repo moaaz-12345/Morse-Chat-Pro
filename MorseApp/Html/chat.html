@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Morse Chat Pro</title>
+
+<link
+rel="icon"
+type="image/png"
+href="../assets/favicon.png">
+
+<link
+rel="stylesheet"
+href="../CSS/style.css">
+
+</head>
+
+
+
+
+<body>
+
+<div
+id="splashScreen"
+class="splash-screen"
+aria-live="polite">
+    <div class="splash-particles" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <section class="splash-card">
+        <div class="splash-logo-wrap">
+            <div class="splash-morse-ring" aria-hidden="true">
+                <span>•</span>
+                <span>—</span>
+                <span>•</span>
+                <span>—</span>
+                <span>•</span>
+                <span>—</span>
+            </div>
+
+            <img
+            class="splash-logo"
+            src="../assets/logo.png"
+            alt="Morse Chat Pro logo">
+        </div>
+
+        <h1>Morse Chat Pro</h1>
+        <p class="splash-status">
+            <span id="splashStatusText">Initializing</span><span class="splash-dots" aria-hidden="true"></span>
+        </p>
+    </section>
+</div>
+
+<div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+        <div id="userInfo" class="profile"></div>
+
+        <input
+        id="searchUser"
+        class="search"
+        placeholder="🔍 Search User">
+
+        <h3>Online Users</h3>
+
+        <div id="onlineUsers"></div>
+
+        <h3>Rooms</h3>
+
+        <select id="roomSelect">
+
+            <option value="" selected disabled>Choose room</option>
+            <option value="General">General</option>
+            <option value="Gaming">Gaming</option>
+            <option value="Study">Study</option>
+            <option value="IT">IT</option>
+
+        </select>
+
+        <h3>Theme</h3>
+
+        <button
+        id="themeBtn"
+        onclick="toggleTheme()">
+
+        🌙 Dark Mode
+
+        </button>
+
+    </div>
+
+
+
+    <!-- Chat -->
+    <div class="chat">
+
+        <div class="chat-header">
+
+        <div class="chat-user">
+
+            <div>
+
+                <h2 id="chatWith">
+                No User Selected
+                </h2>
+
+                <small id="typingStatus">
+                Online
+                </small>
+
+            </div>
+
+        </div>
+
+        <input
+        id="searchMessages"
+        class="chat-search"
+        placeholder="Search messages">
+
+        <div class="chat-icons">
+
+            <button
+            type="button"
+            onclick="startCall('audio')"
+            aria-label="Start voice call">📞</button>
+
+            <button
+            type="button"
+            onclick="startCall('video')"
+            aria-label="Start video call">🎥</button>
+
+            <button
+            type="button"
+            onclick="startCall('screen')"
+            aria-label="Start screen share">🖥️</button>
+
+            <button onclick="toggleSettings()">
+                ⚙
+            </button>
+
+        </div>
+
+    </div>
+
+
+
+        <div
+        id="notificationArea"
+        class="notification d-none">
+
+        </div>
+
+        <button
+        id="pinnedBar"
+        class="pinned-bar"
+        type="button"
+        hidden>
+        </button>
+
+        <div id="messages"></div>
+
+        <div
+        id="uploadProgress"
+        class="upload-progress"
+        hidden>
+            <span id="uploadProgressLabel">Uploading...</span>
+            <div>
+                <i id="uploadProgressBar"></i>
+            </div>
+        </div>
+
+        <div
+        id="filePreviewPanel"
+        class="file-preview-panel"
+        hidden>
+        </div>
+
+
+
+        <div id="replyBox"></div>
+
+
+
+        <div class="bottom-bar">
+
+            <button onclick="toggleEmoji()">
+            😀
+            </button>
+
+            <button
+            type="button"
+            onclick="document.getElementById('fileInput').click()">
+            📎
+            </button>
+
+            <button
+            onclick="startRecording()"
+            id="recordBtn">
+
+            🎤
+
+            </button>
+
+
+            <textarea
+            id="message"
+            placeholder="Write Message..."></textarea>
+
+
+            <button
+            onclick="previewMorse()">
+
+            Convert
+
+            </button>
+
+            <button
+            onclick="sendMessage()">
+
+            ➤
+
+            </button>
+
+        </div>
+
+
+
+        <div
+        id="emojiBox"
+        hidden>
+
+            <span onclick="addEmoji('😀')">😀</span>
+            <span onclick="addEmoji('😂')">😂</span>
+            <span onclick="addEmoji('❤️')">❤️</span>
+            <span onclick="addEmoji('🔥')">🔥</span>
+            <span onclick="addEmoji('👍')">👍</span>
+
+        </div>
+
+
+        <input
+        type="file"
+        id="fileInput"
+        multiple
+        accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.zip,.xls,.xlsx">
+
+    </div>
+
+    <div
+        id="settingsPanel"
+        class="settings-panel">
+
+        <div class="settings-header">
+            <h2>⚙ Settings</h2>
+            <span
+            role="button"
+            tabindex="0"
+            class="settings-close"
+            onclick="closeSettings()"
+            onkeydown="if(event.key === 'Enter' || event.key === ' ') closeSettings()"
+            aria-label="Close settings">
+            ×
+            </span>
+        </div>
+
+        <form
+        id="profileForm"
+        class="profile-form">
+            <label>
+                Profile photo
+                <input
+                id="profileAvatarFile"
+                type="file"
+                accept="image/*">
+            </label>
+
+            <input
+            id="profileAvatar"
+            type="hidden">
+
+            <div
+            id="profileAvatarPreview"
+            class="profile-avatar-preview"
+            hidden>
+            </div>
+
+            <label>
+                Status
+                <input
+                id="profileStatus"
+                maxlength="80"
+                placeholder="Available">
+            </label>
+
+            <label>
+                Bio
+                <textarea
+                id="profileBio"
+                maxlength="180"
+                placeholder="Write a short bio"></textarea>
+            </label>
+
+            <button type="submit">
+            Save Profile
+            </button>
+        </form>
+
+        <button onclick="toggleTheme()">
+        🌙 Theme
+        </button>
+
+        <button onclick="toggleSound()">
+        🔔 Sound
+        </button>
+
+        <button onclick="openCallHistory()">
+        📞 Call History
+        </button>
+
+        <button onclick="clearChat()">
+        🗑 Clear Chat
+        </button>
+
+        <button onclick="logout()">
+        🚪 Logout
+        </button>
+
+        <button
+        type="button"
+        class="settings-close-action"
+        onclick="closeSettings()">
+        Close Settings
+        </button>
+
+        </div>
+
+    <div
+        id="callPanel"
+        class="call-panel"
+        hidden>
+    </div>
+
+    <div
+        id="callHistoryPanel"
+        class="call-history-panel"
+        hidden>
+    </div>
+
+    <div
+        id="profileModal"
+        class="profile-modal"
+        hidden>
+    </div>
+
+</div>
+
+<audio
+id="notifySound"
+src="../audio/notification.mp3">
+</audio>
+
+<script src="../JS/vendor/socket.io.min.js"></script>
+
+<script src="../JS/morse.js"></script>
+<script src="../JS/converter.js"></script>
+<script src="../JS/chat-render.js"></script>
+<script src="../JS/splash.js"></script>
+<script src="../JS/chat-state.js"></script>
+<script src="../JS/chat-actions.js"></script>
+<script src="../JS/chat-ui.js"></script>
+<script src="../JS/chat-sockets.js"></script>
+<script src="../JS/chat.js"></script>
+<script src="../JS/calls.js"></script>
+
+</body>
+
+</html>

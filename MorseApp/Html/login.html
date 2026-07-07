@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Morse Chat Pro Login</title>
+
+<link
+rel="icon"
+type="image/png"
+href="../assets/favicon.png">
+
+<link
+rel="stylesheet"
+href="../CSS/login.css">
+
+</head>
+
+<body>
+
+<main class="login-page">
+
+<section class="login-card">
+
+<img
+src="../assets/logo.png"
+class="login-logo"
+alt="Morse Chat Pro logo">
+
+<p class="login-kicker">
+Secure Morse Messaging
+</p>
+
+<h1 id="authTitle">
+Morse Chat Pro
+</h1>
+
+<div class="auth-switch" role="group" aria-label="Authentication mode">
+    <button
+    id="loginModeBtn"
+    type="button"
+    class="active"
+    onclick="setAuthMode('login')">
+    Login
+    </button>
+
+    <button
+    id="registerModeBtn"
+    type="button"
+    class=""
+    onclick="setAuthMode('register')">
+    Register
+    </button>
+</div>
+
+<label>
+Username
+</label>
+
+<input
+id="username"
+autocomplete="username">
+
+<label>
+Password
+</label>
+
+<input
+type="password"
+id="password"
+autocomplete="current-password">
+
+<div id="avatarGroup" hidden>
+    <label>
+    Choose Avatar
+    </label>
+
+    <input
+    type="file"
+    id="avatar"
+    accept="image/*">
+</div>
+
+<p
+id="authFeedback"
+class="auth-feedback">
+</p>
+
+<button
+id="submitBtn"
+class="submit-btn"
+onclick="login()">
+
+Login
+
+</button>
+
+</section>
+
+</main>
+
+<script src="../JS/login.js"></script>
+
+</body>
+
+</html>

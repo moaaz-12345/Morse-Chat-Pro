@@ -1,0 +1,83 @@
+@media (max-width: 800px) {
+    .sidebar {
+        width: 240px;
+        flex-basis: 240px;
+        padding: 14px;
+    }
+
+    .profile {
+        padding: 15px;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+    }
+
+    .message-row {
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 620px) {
+    body {
+        overflow: auto;
+    }
+
+    .app {
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .chat-header {
+        min-height: 68px;
+        padding: 10px 12px;
+    }
+
+    .chat-icons button {
+        width: 38px;
+        height: 38px;
+    }
+
+    .chat-search {
+        width: 120px;
+        margin-right: 6px;
+    }
+
+    #messages {
+        padding: 16px 10px;
+    }
+
+    .message-row {
+        max-width: 96%;
+    }
+
+    .message-avatar {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+        font-size: 0.75rem;
+    }
+
+    .message {
+        min-width: 135px;
+    }
+
+    .bottom-bar {
+        gap: 5px;
+        padding: 9px 7px;
+    }
+
+    .bottom-bar button {
+        min-width: 39px;
+        height: 41px;
+        padding: 0 8px;
+    }
+
+    .bottom-bar button:nth-of-type(4) {
+        display: none;
+    }
+}

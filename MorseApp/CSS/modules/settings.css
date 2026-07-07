@@ -1,0 +1,208 @@
+.settings-panel {
+    position: fixed;
+    top: 0;
+    right: -340px;
+    z-index: 1000;
+    width: min(320px, 88vw);
+    height: 100vh;
+    padding: 28px;
+    background: #08111f;
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.35);
+    transition: right 0.28s ease;
+}
+
+.settings-panel.active {
+    right: 0;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.settings-panel h2 {
+    margin: 0;
+}
+
+.profile-form {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+.profile-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.profile-form input,
+.profile-form textarea {
+    width: 100%;
+    padding: 10px 11px;
+    color: var(--text);
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    outline: none;
+}
+
+.profile-form textarea {
+    min-height: 72px;
+    resize: vertical;
+}
+
+.profile-avatar-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+}
+
+.profile-avatar-preview[hidden] {
+    display: none;
+}
+
+.profile-avatar-preview img {
+    width: 46px;
+    height: 46px;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+}
+
+.profile-avatar-preview span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.settings-panel button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 14px;
+    color: white;
+    background: var(--panel-soft);
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+}
+
+.settings-panel button:hover {
+    background: var(--primary);
+}
+
+.settings-close {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: inline-grid;
+    place-items: center;
+    margin: 0;
+    padding: 0;
+    color: var(--text);
+    font-size: 1.5rem;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.settings-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: scale(1.04);
+}
+
+.settings-panel .settings-close-action {
+    margin-top: 12px;
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+}
+
+.profile-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(2, 6, 23, 0.62);
+    backdrop-filter: blur(8px);
+}
+
+.profile-modal[hidden] {
+    display: none;
+}
+
+.profile-modal-card {
+    position: relative;
+    width: min(360px, 92vw);
+    padding: 24px;
+    color: var(--text);
+    text-align: center;
+    background: #0d1728;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+}
+
+.profile-modal-avatar {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    margin: 0 auto 12px;
+    border: 3px solid var(--primary);
+    border-radius: 50%;
+}
+
+.profile-modal-card h3 {
+    margin-bottom: 6px;
+}
+
+.profile-modal-card span {
+    display: inline-flex;
+    padding: 5px 10px;
+    color: #bbf7d0;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.22);
+    border-radius: 999px;
+    font-size: 0.78rem;
+}
+
+.profile-modal-card p {
+    margin: 14px 0;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.profile-modal-card small {
+    color: var(--muted);
+}
+
+.profile-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+}
+

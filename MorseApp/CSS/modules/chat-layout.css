@@ -1,0 +1,124 @@
+.chat {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    background: rgba(5, 12, 24, 0.52);
+}
+
+.chat-header {
+    display: flex;
+    min-height: 82px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 26px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(24px);
+}
+
+#chatWith {
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+#typingStatus {
+    display: block;
+    min-height: 18px;
+    margin-top: 4px;
+    color: var(--success);
+    font-size: 0.78rem;
+}
+
+.chat-search {
+    width: min(260px, 30vw);
+    min-height: 40px;
+    margin-right: 14px;
+    margin-left: auto;
+    padding: 0 13px;
+    color: var(--text);
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    outline: none;
+}
+
+.chat-search:focus {
+    border-color: var(--primary);
+}
+
+.chat-icons {
+    display: flex;
+    gap: 8px;
+}
+
+.chat-icons button,
+.bottom-bar button {
+    display: inline-grid;
+    place-items: center;
+    color: white;
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.chat-icons button {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+}
+
+.chat-icons button:hover,
+.bottom-bar button:hover {
+    background: var(--primary);
+    transform: translateY(-1px);
+}
+
+.notification {
+    margin: 12px 20px 0;
+    padding: 12px 16px;
+    background: var(--primary);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+
+.pinned-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 20px 0;
+    padding: 10px 14px;
+    color: var(--text);
+    text-align: left;
+    background: rgba(109, 93, 252, 0.15);
+    border: 1px solid rgba(109, 93, 252, 0.34);
+    border-radius: 14px;
+    cursor: pointer;
+}
+
+.pinned-bar[hidden] {
+    display: none;
+}
+
+.pinned-bar span {
+    color: #fde68a;
+    font-weight: 700;
+}
+
+.pinned-bar strong {
+    white-space: nowrap;
+}
+
+.pinned-bar em {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-style: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.d-none {
+    display: none;
+}
+

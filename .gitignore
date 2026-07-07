@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+out/
+release/
+*.exe
+*.msi
+*.blockmap
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime uploads and local data
+MorseServer/uploads/*
+!MorseServer/uploads/.gitkeep
+MorseServer/messages.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Android / Capacitor generated build artifacts
+MorseApp/android/.gradle/
+MorseApp/android/build/
+MorseApp/android/app/build/
+

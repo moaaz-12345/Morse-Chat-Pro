@@ -1,0 +1,54 @@
+.light-mode {
+    --bg: #eef2ff;
+    --panel: rgba(255, 255, 255, 0.94);
+    --panel-solid: #ffffff;
+    --panel-soft: #eef2f7;
+    --border: rgba(15, 23, 42, 0.11);
+    --text: #172033;
+    --muted: #64748b;
+    --incoming: #ffffff;
+    color-scheme: light;
+    background: #e9eef8;
+}
+
+.light-mode .chat {
+    background: #edf2f8;
+}
+
+.light-mode .other-message {
+    color: #172033;
+}
+
+.light-mode .other-message .message-sender {
+    color: #4f46e5;
+}
+
+.light-mode .other-message .message-info {
+    color: #64748b;
+}
+
+.light-mode .menu-list,
+.light-mode .settings-panel {
+    background: #ffffff;
+}
+
+@keyframes message-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+::-webkit-scrollbar {
+    width: 7px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(109, 93, 252, 0.7);
+    border-radius: 999px;
+}
+
