@@ -6,10 +6,17 @@
   "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "configure:dev": "node scripts/write-app-config.js development",
+    "configure:prod": "node scripts/write-app-config.js production",
+    "start": "npm run configure:dev && electron .",
     "build": "electron-builder --win",
+    "build:win:prod": "npm run configure:prod && electron-builder --win",
     "build:dir": "electron-builder --dir",
-    "check": "node --check main.js && node --check JS/login.js && node --check JS/chat-state.js && node --check JS/chat-ui.js && node --check JS/chat-sockets.js && node --check JS/chat-actions.js && node --check JS/chat-render.js && node --check JS/calls.js && node --check JS/splash.js"
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:apk": "cd android && gradlew.bat assembleRelease",
+    "android:aab": "cd android && gradlew.bat bundleRelease",
+    "check": "node --check main.js && node --check scripts/write-app-config.js && node --check JS/login.js && node --check JS/chat-state.js && node --check JS/chat-ui.js && node --check JS/chat-sockets.js && node --check JS/chat-actions.js && node --check JS/chat-render.js && node --check JS/calls.js && node --check JS/splash.js"
   },
   "build": {
     "appId": "com.morsechatpro.app",
@@ -53,8 +60,14 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
+    "@capacitor/camera": "^8.2.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "socket.io-client": "^4.8.3"
   }
 }

@@ -37,7 +37,7 @@ MorseServer/    Backend API, Socket.IO, MongoDB models, uploads
 ```bash
 cd MorseServer
 npm install
-copy ..\.env.example .env
+copy .env.development.example .env
 npm start
 ```
 
@@ -61,11 +61,16 @@ npm install
 npm start
 ```
 
+## Production deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for MongoDB Atlas, backend hosting, Google OAuth, environment variables, and production Electron build steps.
+
 ## Build Windows installer
 
 ```bash
 cd MorseApp
-npm run build
+$env:MORSE_SERVER_URL="https://your-backend-domain.example.com"
+npm run build:win:prod
 ```
 
 The Windows installer is generated in:

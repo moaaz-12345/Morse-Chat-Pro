@@ -1,10 +1,11 @@
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = window.MORSE_CHAT_CONFIG?.serverUrl || "http://localhost:3000";
 
 const username = localStorage.getItem("username");
 const token = localStorage.getItem("token");
 let avatar = localStorage.getItem("avatar");
 let currentProfile = {
     avatar,
+    displayName: localStorage.getItem("displayName") || username,
     bio: localStorage.getItem("bio") || "",
     status: localStorage.getItem("status") || "Available"
 };
@@ -22,6 +23,9 @@ let soundEnabled = true;
 let typingTimer;
 let mediaRecorder;
 let audioChunks = [];
+let mutedUsers = JSON.parse(localStorage.getItem("mutedUsers") || "[]");
+let blockedUsers = JSON.parse(localStorage.getItem("blockedUsers") || "[]");
+let blockWindows = JSON.parse(localStorage.getItem("blockWindows") || "[]");
 
 const messageStore = new Map();
 const userAvatars = new Map();
@@ -43,8 +47,16 @@ function renderCurrentUserInfo() {
             src="../assets/logo-white.png"
             alt="Morse Chat Pro logo"
         >
-        ${renderAvatar(avatar, username, "profile-avatar")}
-        <h4>${escapeHtml(username || "Guest")}</h4>
+        <button
+            class="profile-avatar-button"
+            type="button"
+            onclick="openEditProfile()"
+            aria-label="Edit your profile"
+            title="Edit profile"
+        >
+            ${renderAvatar(avatar, username, "profile-avatar")}
+        </button>
+        <h4>${escapeHtml(currentProfile.displayName || username || "Guest")}</h4>
         <small>${escapeHtml(currentProfile.status || "Available")}</small>
     `;
 }

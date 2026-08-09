@@ -56,12 +56,34 @@ Morse Chat Pro
 </div>
 
 <label>
-Username
+Username / Email / Phone
 </label>
 
 <input
 id="username"
 autocomplete="username">
+
+<div id="contactFields" hidden>
+    <label>
+    Email
+    </label>
+
+    <input
+    id="email"
+    type="email"
+    autocomplete="email"
+    placeholder="you@example.com">
+
+    <label>
+    Phone Number
+    </label>
+
+    <input
+    id="phone"
+    type="tel"
+    autocomplete="tel"
+    placeholder="+201001234567">
+</div>
 
 <label>
 Password
@@ -97,10 +119,24 @@ Login
 
 </button>
 
+<div class="auth-divider">
+    <span>or</span>
+</div>
+
+<button
+type="button"
+class="google-btn"
+onclick="loginWithGoogle()">
+    <span>G</span>
+    Continue with Google
+</button>
+
 </section>
 
 </main>
 
+<script src="../JS/capacitor-mobile.js"></script>
+<script src="../JS/app-config.js"></script>
 <script src="../JS/login.js"></script>
 
 </body>

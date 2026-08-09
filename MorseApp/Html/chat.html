@@ -113,6 +113,15 @@ aria-live="polite">
 
         <div class="chat-user">
 
+            <button
+            id="chatHeaderProfileBtn"
+            class="chat-header-profile"
+            type="button"
+            onclick="selectedUser && openUserProfile(selectedUser)"
+            aria-label="View chat profile"
+            hidden>
+            </button>
+
             <div>
 
                 <h2 id="chatWith">
@@ -280,7 +289,8 @@ aria-live="polite">
 
         <form
         id="profileForm"
-        class="profile-form">
+        class="profile-form"
+        hidden>
             <label>
                 Profile photo
                 <input
@@ -319,6 +329,12 @@ aria-live="polite">
             Save Profile
             </button>
         </form>
+
+        <button
+        type="button"
+        onclick="openEditProfile()">
+        👤 Edit Profile
+        </button>
 
         <button onclick="toggleTheme()">
         🌙 Theme
@@ -376,6 +392,8 @@ src="../audio/notification.mp3">
 
 <script src="../JS/vendor/socket.io.min.js"></script>
 
+<script src="../JS/capacitor-mobile.js"></script>
+<script src="../JS/app-config.js"></script>
 <script src="../JS/morse.js"></script>
 <script src="../JS/converter.js"></script>
 <script src="../JS/chat-render.js"></script>

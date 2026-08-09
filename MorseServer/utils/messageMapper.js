@@ -37,7 +37,8 @@ function toClientMessage(message) {
         reactions: mapReactions(plainMessage.reactions),
         pinned: Boolean(plainMessage.pinned),
         pinnedBy: plainMessage.pinnedBy || null,
-        edited: Boolean(plainMessage.edited)
+        edited: Boolean(plainMessage.edited),
+        createdAt: plainMessage.createdAt || null
     };
 }
 
