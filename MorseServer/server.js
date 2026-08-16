@@ -32,8 +32,19 @@ const { authRouter } = require("./routes/authRoutes");
 const { createUploadRouter } = require("./routes/uploadRoutes");
 const { registerChatSocket } = require("./socket/chatSocket");
 
+const trustedMobileOrigins = new Set([
+    "http://localhost",
+    "https://localhost",
+    "capacitor://localhost",
+    "ionic://localhost"
+]);
+
 function isAllowedOrigin(origin) {
     if (!origin || origin === "null") {
+        return true;
+    }
+
+    if (trustedMobileOrigins.has(origin)) {
         return true;
     }
 
