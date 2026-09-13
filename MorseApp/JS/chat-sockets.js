@@ -1,10 +1,18 @@
 socket.on("receive-message", (data) => {
+    if (isUserBlocked(data.from) || wasMessageSentDuringBlock(data)) {
+        return;
+    }
+
     if (data.from !== selectedUser) {
         unreadCounts[data.from] = (unreadCounts[data.from] || 0) + 1;
         updateUsersList();
     } else {
         renderMessage(data);
         socket.emit("message-seen", data.id);
+    }
+
+    if (isUserMuted(data.from)) {
+        return;
     }
 
     notificationArea.classList.remove("d-none");
@@ -20,9 +28,11 @@ socket.on("receive-message", (data) => {
 socket.on("chat-history", (history) => {
     messagesElement.innerHTML = "";
     messageStore.clear();
-    history.forEach((message) => renderMessage(message, { scroll: false }));
     history
-        .filter((message) => message.to === username && message.status !== "seen")
+        .filter((message) => !wasMessageSentDuringBlock(message))
+        .forEach((message) => renderMessage(message, { scroll: false }));
+    history
+        .filter((message) => message.to === username && message.status !== "seen" && !wasMessageSentDuringBlock(message))
         .forEach((message) => socket.emit("message-seen", message.id));
     updatePinnedBar();
     messagesElement.scrollTop = messagesElement.scrollHeight;
@@ -31,12 +41,18 @@ socket.on("chat-history", (history) => {
 socket.on("room-history", (history) => {
     messagesElement.innerHTML = "";
     messageStore.clear();
-    history.forEach((message) => renderMessage(message, { scroll: false }));
+    history
+        .filter((message) => !wasMessageSentDuringBlock(message))
+        .forEach((message) => renderMessage(message, { scroll: false }));
     updatePinnedBar();
     messagesElement.scrollTop = messagesElement.scrollHeight;
 });
 
 socket.on("receive-room-message", (data) => {
+    if (isUserBlocked(data.from) || wasMessageSentDuringBlock(data)) {
+        return;
+    }
+
     if (data.room === selectedRoom) {
         renderMessage(data);
         return;
@@ -61,10 +77,19 @@ socket.on("users-list", (data) => {
                     type="button"
                     onclick="selectUser('${escapeHtml(user.username)}')"
                 >
-                    ${renderAvatar(user.avatar, user.username, "user-list-avatar")}
+                    <span
+                        class="user-list-avatar-action"
+                        role="button"
+                        tabindex="0"
+                        onclick="event.stopPropagation(); openUserProfile('${escapeHtml(user.username)}')"
+                        onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.stopPropagation(); openUserProfile('${escapeHtml(user.username)}'); }"
+                        aria-label="View ${escapeHtml(user.username)} profile"
+                    >
+                        ${renderAvatar(user.avatar, user.username, "user-list-avatar")}
+                    </span>
                     <span class="user-list-details">
                         <strong>${escapeHtml(user.username)}</strong>
-                        <small>Online</small>
+                        <small data-base-status="Online">Online</small>
                         <span class="badge-area"></span>
                     </span>
                     <span
@@ -86,10 +111,17 @@ socket.on("users-list", (data) => {
         if (!online && name !== username) {
             html += `
                 <div class="user-list-item offline-user">
-                    ${renderAvatar(userAvatars.get(name), name, "user-list-avatar")}
+                    <button
+                        class="user-list-avatar-action"
+                        type="button"
+                        onclick="openUserProfile('${escapeHtml(name)}')"
+                        aria-label="View ${escapeHtml(name)} profile"
+                    >
+                        ${renderAvatar(userAvatars.get(name), name, "user-list-avatar")}
+                    </button>
                     <span class="user-list-details">
                         <strong>${escapeHtml(name)}</strong>
-                        <small>Last seen ${escapeHtml(seenAt)}</small>
+                        <small data-base-status="Last seen ${escapeHtml(seenAt)}">Last seen ${escapeHtml(seenAt)}</small>
                     </span>
                     <button
                         class="user-profile-btn offline-profile-btn"
@@ -102,11 +134,22 @@ socket.on("users-list", (data) => {
         }
     });
 
-    document.getElementById("onlineUsers").innerHTML = html;
+    document.getElementById("onlineUsers").innerHTML = html || `
+        <div class="empty-users">
+            <span>👋</span>
+            <p>No contacts online yet.</p>
+            <small>Open another account to start chatting.</small>
+        </div>
+    `;
     updateUsersList();
+    updateChatHeaderProfile(selectedUser);
 });
 
 socket.on("user-typing", (data) => {
+    if (isUserBlocked(data.from)) {
+        return;
+    }
+
     document.getElementById("typingStatus").textContent = `${data.from} is typing...`;
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {

@@ -1,4 +1,4 @@
-package com.morsemaster.app;
+package com.morsechatpro.app;
 
 import com.getcapacitor.BridgeActivity;
 

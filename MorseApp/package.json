@@ -12,11 +12,13 @@
     "build": "electron-builder --win",
     "build:win:prod": "npm run configure:prod && electron-builder --win",
     "build:dir": "electron-builder --dir",
-    "android:sync": "cap sync android",
+    "android:prepare": "npm run configure:prod && node scripts/prepare-android.js",
+    "android:sync": "npm run android:prepare && cap sync android",
     "android:open": "cap open android",
-    "android:apk": "cd android && gradlew.bat assembleRelease",
-    "android:aab": "cd android && gradlew.bat bundleRelease",
-    "check": "node --check main.js && node --check scripts/write-app-config.js && node --check JS/login.js && node --check JS/chat-state.js && node --check JS/chat-ui.js && node --check JS/chat-sockets.js && node --check JS/chat-actions.js && node --check JS/chat-render.js && node --check JS/calls.js && node --check JS/splash.js"
+    "android:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleRelease",
+    "android:aab": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "check": "node --check main.js && node --check scripts/write-app-config.js && node --check scripts/prepare-android.js && node --check JS/login.js && node --check JS/chat-state.js && node --check JS/chat-ui.js && node --check JS/chat-sockets.js && node --check JS/chat-actions.js && node --check JS/chat-render.js && node --check JS/calls.js && node --check JS/splash.js"
   },
   "build": {
     "appId": "com.morsechatpro.app",

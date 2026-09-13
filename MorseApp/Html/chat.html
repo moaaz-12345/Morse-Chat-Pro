@@ -7,7 +7,7 @@
 
 <meta
 name="viewport"
-content="width=device-width, initial-scale=1.0">
+content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <title>Morse Chat Pro</title>
 
@@ -112,6 +112,15 @@ aria-live="polite">
         <div class="chat-header">
 
         <div class="chat-user">
+
+            <button
+            id="mobileSidebarBtn"
+            class="mobile-sidebar-btn"
+            type="button"
+            onclick="toggleMobileSidebar()"
+            aria-label="Open chats">
+            ☰
+            </button>
 
             <button
             id="chatHeaderProfileBtn"
@@ -364,6 +373,15 @@ aria-live="polite">
         </button>
 
         </div>
+
+    <button
+        id="sidebarOverlay"
+        class="sidebar-overlay"
+        type="button"
+        onclick="closeMobileSidebar()"
+        aria-label="Close chats"
+        hidden>
+    </button>
 
     <div
         id="callPanel"

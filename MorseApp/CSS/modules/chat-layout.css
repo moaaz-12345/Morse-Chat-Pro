@@ -17,6 +17,56 @@
     backdrop-filter: blur(24px);
 }
 
+.chat-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mobile-sidebar-btn {
+    display: none;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    color: var(--text);
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    cursor: pointer;
+}
+
+.chat-header-profile {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.chat-header-profile[hidden] {
+    display: none;
+}
+
+.chat-header-profile:focus-visible {
+    outline: 2px solid rgba(96, 165, 250, 0.85);
+    outline-offset: 3px;
+}
+
+.chat-header-avatar {
+    width: 46px;
+    height: 46px;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 18px rgba(109, 93, 252, 0.35);
+}
+
 #chatWith {
     font-size: clamp(1.05rem, 2vw, 1.35rem);
 }

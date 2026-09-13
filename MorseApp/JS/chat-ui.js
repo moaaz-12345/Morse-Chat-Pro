@@ -57,14 +57,180 @@ function renderProfileAvatarPreview(source) {
     `;
 }
 
+function renderProfilePreviewMarkup(source, label = "Selected profile photo") {
+    if (!source) {
+        return "";
+    }
+
+    const imageSource = source.startsWith("/uploads/")
+        ? `${SERVER_URL}${source}`
+        : source;
+
+    return `
+        <div class="profile-avatar-preview">
+            <img src="${escapeHtml(imageSource)}" alt="Profile photo preview">
+            <span>${escapeHtml(label)}</span>
+        </div>
+    `;
+}
+
+function persistUserPreferences() {
+    localStorage.setItem("mutedUsers", JSON.stringify([...new Set(mutedUsers)]));
+    localStorage.setItem("blockedUsers", JSON.stringify([...new Set(blockedUsers)]));
+    localStorage.setItem("blockWindows", JSON.stringify(blockWindows));
+}
+
+function applyUserPreferences(preferences = {}) {
+    mutedUsers = Array.isArray(preferences.mutedUsers) ? preferences.mutedUsers : mutedUsers;
+    blockedUsers = Array.isArray(preferences.blockedUsers) ? preferences.blockedUsers : blockedUsers;
+    blockWindows = Array.isArray(preferences.blockWindows) ? preferences.blockWindows : blockWindows;
+    persistUserPreferences();
+    updateUsersList();
+}
+
+async function loadUserPreferences() {
+    try {
+        const response = await fetch(`${SERVER_URL}/auth/preferences`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        const preferences = await response.json();
+
+        if (!response.ok) {
+            throw new Error(preferences.error || "Unable to load preferences.");
+        }
+
+        applyUserPreferences(preferences);
+    } catch (error) {
+        console.warn("Using local mute/block preferences:", error.message);
+        applyUserPreferences({ mutedUsers, blockedUsers, blockWindows });
+    }
+}
+
+async function loadCurrentUserProfile() {
+    try {
+        const response = await fetch(`${SERVER_URL}/auth/me`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to load profile.");
+        }
+
+        applyProfile(data.user);
+    } catch (error) {
+        console.warn("Using cached profile:", error.message);
+    }
+}
+
+async function saveUserPreference(profileUsername, changes) {
+    const response = await fetch(`${SERVER_URL}/auth/preferences/${encodeURIComponent(profileUsername)}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(changes)
+    });
+    const preferences = await response.json();
+
+    if (!response.ok) {
+        throw new Error(preferences.error || "Unable to update preferences.");
+    }
+
+    applyUserPreferences(preferences);
+}
+
+function isUserMuted(profileUsername) {
+    return mutedUsers.includes(profileUsername);
+}
+
+function isUserBlocked(profileUsername) {
+    return blockedUsers.includes(profileUsername);
+}
+
+function getMessageTimestamp(message) {
+    const dateValue = message?.createdAt || message?.timestamp || null;
+    const timestamp = dateValue ? new Date(dateValue).getTime() : Date.now();
+
+    return Number.isFinite(timestamp) ? timestamp : Date.now();
+}
+
+function wasMessageSentDuringBlock(message) {
+    if (!message?.from || message.from === username) {
+        return false;
+    }
+
+    const messageTime = getMessageTimestamp(message);
+
+    return blockWindows.some((window) => {
+        if (window.username !== message.from || !window.blockedAt) {
+            return false;
+        }
+
+        const blockedAt = new Date(window.blockedAt).getTime();
+        const unblockedAt = window.unblockedAt
+            ? new Date(window.unblockedAt).getTime()
+            : Infinity;
+
+        return messageTime >= blockedAt && messageTime <= unblockedAt;
+    });
+}
+
+async function toggleUserMute(profileUsername) {
+    const nextMuted = !isUserMuted(profileUsername);
+
+    try {
+        await saveUserPreference(profileUsername, {
+            muted: nextMuted,
+            blocked: isUserBlocked(profileUsername)
+        });
+        showToast(`${profileUsername} notifications ${nextMuted ? "muted" : "unmuted"}`);
+    } catch (error) {
+        showToast(error.message || "Unable to update mute setting.");
+    }
+
+    openUserProfile(profileUsername);
+}
+
+async function toggleUserBlock(profileUsername) {
+    const nextBlocked = !isUserBlocked(profileUsername);
+
+    try {
+        await saveUserPreference(profileUsername, {
+            muted: isUserMuted(profileUsername),
+            blocked: nextBlocked
+        });
+
+        showToast(`${profileUsername} ${nextBlocked ? "blocked" : "unblocked"}`);
+
+        if (nextBlocked) {
+            unreadCounts[profileUsername] = 0;
+        }
+    } catch (error) {
+        showToast(error.message || "Unable to update block setting.");
+        openUserProfile(profileUsername);
+        return;
+    }
+
+    updateUsersList();
+    openUserProfile(profileUsername);
+}
+
 function applyProfile(user) {
     currentProfile = {
         avatar: user.avatar || null,
+        displayName: user.displayName || user.username || username,
         bio: user.bio || "",
         status: user.status || "Available"
     };
     avatar = currentProfile.avatar;
     localStorage.setItem("avatar", avatar || "");
+    localStorage.setItem("displayName", currentProfile.displayName);
     localStorage.setItem("bio", currentProfile.bio);
     localStorage.setItem("status", currentProfile.status);
     renderCurrentUserInfo();
@@ -100,6 +266,8 @@ async function saveProfile(event) {
 
 profileForm?.addEventListener("submit", saveProfile);
 syncProfileForm();
+loadCurrentUserProfile();
+loadUserPreferences();
 
 profileAvatarFileInput?.addEventListener("change", async function () {
     const file = this.files[0];
@@ -128,6 +296,113 @@ profileAvatarFileInput?.addEventListener("change", async function () {
         this.value = "";
     }
 });
+
+function openEditProfile() {
+    if (!profileModal) {
+        return;
+    }
+
+    profileModal.hidden = false;
+    profileModal.innerHTML = `
+        <div class="profile-modal-card profile-edit-card">
+            <button type="button" class="profile-modal-close" onclick="closeUserProfile()" aria-label="Close profile editor">×</button>
+            <h3>Edit Profile</h3>
+            <form id="editProfileForm" class="profile-modal-form">
+                <label>
+                    Display name
+                    <input id="editProfileDisplayName" maxlength="60" placeholder="Your name" value="${escapeHtml(currentProfile.displayName || username)}">
+                </label>
+
+                <label>
+                    Profile photo
+                    <input id="editProfileAvatarFile" type="file" accept="image/*">
+                </label>
+
+                <input id="editProfileAvatar" type="hidden" value="${escapeHtml(currentProfile.avatar || "")}">
+
+                <div id="editProfileAvatarPreview">
+                    ${renderProfilePreviewMarkup(currentProfile.avatar, "Current profile photo")}
+                </div>
+
+                <label>
+                    Status
+                    <input id="editProfileStatus" maxlength="80" placeholder="Available" value="${escapeHtml(currentProfile.status || "Available")}">
+                </label>
+
+                <label>
+                    Bio
+                    <textarea id="editProfileBio" maxlength="180" placeholder="Write a short bio">${escapeHtml(currentProfile.bio || "")}</textarea>
+                </label>
+
+                <button type="submit" class="profile-modal-save">Save Profile</button>
+            </form>
+        </div>
+    `;
+
+    const editForm = document.getElementById("editProfileForm");
+    const editAvatarFile = document.getElementById("editProfileAvatarFile");
+    const editAvatar = document.getElementById("editProfileAvatar");
+    const editPreview = document.getElementById("editProfileAvatarPreview");
+    const editDisplayName = document.getElementById("editProfileDisplayName");
+    const editStatus = document.getElementById("editProfileStatus");
+    const editBio = document.getElementById("editProfileBio");
+
+    editAvatarFile?.addEventListener("change", async function () {
+        const file = this.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            showToast("Please choose an image file.");
+            this.value = "";
+            return;
+        }
+
+        try {
+            setUploadProgress(0, "Uploading profile photo");
+            const upload = await uploadFileWithProgress(file);
+            editAvatar.value = upload.path;
+            editPreview.innerHTML = renderProfilePreviewMarkup(upload.path);
+            showToast("Profile photo ready. Click Save Profile.");
+        } catch (error) {
+            console.error("Profile photo upload failed:", error);
+            showToast(error.message || "Profile photo upload failed.");
+        } finally {
+            hideUploadProgress();
+            this.value = "";
+        }
+    });
+
+    editForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const response = await fetch(`${SERVER_URL}/auth/profile`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                displayName: editDisplayName.value,
+                avatar: editAvatar.value,
+                status: editStatus.value,
+                bio: editBio.value
+            })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.error || "Unable to update profile.");
+            return;
+        }
+
+        applyProfile(data.user);
+        closeUserProfile();
+        showToast("Profile updated");
+    });
+}
 
 function closeUserProfile() {
     if (!profileModal) {
@@ -164,14 +439,28 @@ async function openUserProfile(profileUsername) {
         }
 
         const user = data.user;
+        const canManageUser = user.username !== username;
+        const muted = isUserMuted(user.username);
+        const blocked = isUserBlocked(user.username);
         profileModal.innerHTML = `
             <div class="profile-modal-card">
                 <button type="button" class="profile-modal-close" onclick="closeUserProfile()" aria-label="Close profile">×</button>
                 ${renderAvatar(user.avatar, user.username, "profile-modal-avatar")}
-                <h3>${escapeHtml(user.username)}</h3>
+                <h3>${escapeHtml(user.displayName || user.username)}</h3>
+                ${user.displayName && user.displayName !== user.username ? `<small>@${escapeHtml(user.username)}</small>` : ""}
                 <span>${escapeHtml(user.status || "Available")}</span>
                 <p>${escapeHtml(user.bio || "No bio yet.")}</p>
                 ${user.lastSeen ? `<small>Last seen ${escapeHtml(new Date(user.lastSeen).toLocaleString())}</small>` : ""}
+                ${canManageUser ? `
+                    <div class="profile-modal-actions">
+                        <button type="button" class="profile-action-btn" onclick="toggleUserMute('${escapeHtml(user.username)}')">
+                            ${muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications"}
+                        </button>
+                        <button type="button" class="profile-action-btn danger" onclick="toggleUserBlock('${escapeHtml(user.username)}')">
+                            ${blocked ? "✅ Unblock User" : "⛔ Block User"}
+                        </button>
+                    </div>
+                ` : ""}
             </div>
         `;
     } catch (error) {
@@ -182,6 +471,24 @@ async function openUserProfile(profileUsername) {
             </div>
         `;
     }
+}
+
+function updateChatHeaderProfile(profileUsername) {
+    const headerButton = document.getElementById("chatHeaderProfileBtn");
+
+    if (!headerButton) {
+        return;
+    }
+
+    if (!profileUsername) {
+        headerButton.hidden = true;
+        headerButton.innerHTML = "";
+        return;
+    }
+
+    headerButton.hidden = false;
+    headerButton.innerHTML = renderAvatar(userAvatars.get(profileUsername), profileUsername, "chat-header-avatar");
+    headerButton.setAttribute("aria-label", `View ${profileUsername} profile`);
 }
 
 const uploadProgress = document.getElementById("uploadProgress");
@@ -422,6 +729,7 @@ document.getElementById("roomSelect").addEventListener("change", function () {
     });
 
     document.getElementById("chatWith").textContent = `# ${selectedRoom}`;
+    updateChatHeaderProfile(null);
     document.getElementById("typingStatus").textContent = "Room conversation";
     document.getElementById("searchMessages").value = "";
     roomUnreadCounts[selectedRoom] = 0;
@@ -429,6 +737,7 @@ document.getElementById("roomSelect").addEventListener("change", function () {
     pinnedBar.hidden = true;
     socket.emit("join-room", { room: selectedRoom, username });
     socket.emit("load-room-history", selectedRoom);
+    closeMobileSidebar();
 });
 
 document.getElementById("searchMessages").addEventListener("input", function () {
@@ -459,10 +768,12 @@ function selectUser(user) {
     });
 
     document.getElementById("chatWith").textContent = `Chat with ${user}`;
+    updateChatHeaderProfile(user);
     document.getElementById("typingStatus").textContent = "Online";
     document.getElementById("searchMessages").value = "";
     pinnedBar.hidden = true;
     socket.emit("load-history", { username, withUser: user });
+    closeMobileSidebar();
 }
 
 function updateUsersList() {
@@ -470,9 +781,23 @@ function updateUsersList() {
         const user = item.id.replace("user-", "");
         const count = unreadCounts[user] || 0;
         const badgeArea = item.querySelector(".badge-area");
+        const details = item.querySelector(".user-list-details small");
 
         if (badgeArea) {
             badgeArea.innerHTML = count > 0 ? `<span class="unread-badge">${count}</span>` : "";
+        }
+
+        item.classList.toggle("muted-user", isUserMuted(user));
+        item.classList.toggle("blocked-user", isUserBlocked(user));
+
+        const baseStatus = details?.dataset.baseStatus || details?.textContent || "";
+
+        if (details && isUserBlocked(user)) {
+            details.textContent = "Blocked";
+        } else if (details && isUserMuted(user)) {
+            details.textContent = `${baseStatus} · Muted`;
+        } else if (details) {
+            details.textContent = baseStatus;
         }
     });
 }
@@ -581,6 +906,16 @@ function toggleSettings() {
 
 function closeSettings() {
     document.getElementById("settingsPanel").classList.remove("active");
+}
+
+function toggleMobileSidebar() {
+    document.querySelector(".sidebar")?.classList.toggle("mobile-open");
+    document.getElementById("sidebarOverlay")?.toggleAttribute("hidden");
+}
+
+function closeMobileSidebar() {
+    document.querySelector(".sidebar")?.classList.remove("mobile-open");
+    document.getElementById("sidebarOverlay")?.setAttribute("hidden", "");
 }
 
 function openCallHistory() {

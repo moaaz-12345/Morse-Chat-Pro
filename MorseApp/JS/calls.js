@@ -12,6 +12,9 @@ class CallManager {
         this.callPanel = document.getElementById("callPanel");
         this.callHistoryPanel = document.getElementById("callHistoryPanel");
         this.callHistory = [];
+        this.ringtoneContext = null;
+        this.ringtoneTimer = null;
+        this.ringtoneGain = null;
         this.bindSignalingEvents();
     }
 
@@ -120,13 +123,25 @@ class CallManager {
         const callLabel = this.callType === "screen"
             ? "Screen share"
             : (this.callType === "video" ? "Video" : "Voice");
+        const callIcon = this.callType === "screen"
+            ? "🖥️"
+            : (this.callType === "video" ? "🎥" : "📞");
 
         this.showPanel(`
-            <h3>${message}</h3>
-            <p>${callLabel} with ${this.activeUser}</p>
-            <span id="callStatus" class="call-status">Ringing</span>
-            <strong id="callTimer" class="call-timer">00:00</strong>
-            <div id="callMediaArea" class="call-media-area">
+            <div class="call-shell call-${this.callType || "audio"}">
+                <div class="call-topline">
+                    <div class="call-icon">${callIcon}</div>
+                    <div>
+                        <h3>${message}</h3>
+                        <p>${callLabel} with ${this.activeUser}</p>
+                    </div>
+                </div>
+                <div class="call-meta">
+                    <span id="callStatus" class="call-status">Ringing</span>
+                    <strong id="callTimer" class="call-timer">00:00</strong>
+                </div>
+            </div>
+            <div id="callMediaArea" class="call-media-area call-media-${this.callType || "audio"}">
                 <div class="local-preview-wrap">
                     <span>Local preview</span>
                     <div id="localCallPreview" class="local-call-preview"></div>
@@ -160,6 +175,83 @@ class CallManager {
 
         statusElement.textContent = status;
         statusElement.className = `call-status ${tone}`;
+    }
+
+    stopRingtone() {
+        clearInterval(this.ringtoneTimer);
+        this.ringtoneTimer = null;
+
+        if (this.ringtoneGain) {
+            try {
+                this.ringtoneGain.gain.setTargetAtTime(0, this.ringtoneContext.currentTime, 0.04);
+            } catch {
+                // Ignore audio context shutdown timing issues.
+            }
+        }
+    }
+
+    playRingtone(direction = "incoming", callType = this.callType || "audio") {
+        this.stopRingtone();
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioContextClass) {
+            return;
+        }
+
+        try {
+            this.ringtoneContext = this.ringtoneContext || new AudioContextClass();
+
+            if (this.ringtoneContext.state === "suspended") {
+                this.ringtoneContext.resume().catch(() => {});
+            }
+
+            this.ringtoneGain = this.ringtoneContext.createGain();
+            this.ringtoneGain.gain.value = 0.032;
+            this.ringtoneGain.connect(this.ringtoneContext.destination);
+
+            const patterns = {
+                audio: {
+                    incoming: [523.25, 659.25, 783.99, 659.25],
+                    outgoing: [392, 493.88, 587.33]
+                },
+                video: {
+                    incoming: [659.25, 880, 987.77, 880, 739.99],
+                    outgoing: [440, 554.37, 659.25, 830.61]
+                },
+                screen: {
+                    incoming: [587.33, 739.99, 880, 739.99],
+                    outgoing: [369.99, 493.88, 659.25]
+                }
+            };
+            const family = patterns[callType] || patterns.audio;
+            const pattern = family[direction] || family.incoming;
+            const waveType = callType === "video" ? "triangle" : "sine";
+            const pulseLength = callType === "video" ? 0.16 : 0.2;
+            const pulseGap = direction === "outgoing"
+                ? (callType === "video" ? 480 : 560)
+                : (callType === "video" ? 360 : 460);
+            let noteIndex = 0;
+
+            const playPulse = () => {
+                if (!this.ringtoneContext || !this.ringtoneGain) {
+                    return;
+                }
+
+                const oscillator = this.ringtoneContext.createOscillator();
+                oscillator.type = waveType;
+                oscillator.frequency.value = pattern[noteIndex % pattern.length];
+                oscillator.connect(this.ringtoneGain);
+                oscillator.start();
+                oscillator.stop(this.ringtoneContext.currentTime + pulseLength);
+                noteIndex += 1;
+            };
+
+            playPulse();
+            this.ringtoneTimer = setInterval(playPulse, pulseGap);
+        } catch (error) {
+            console.warn("Ringtone could not be started:", error);
+        }
     }
 
     createPeer() {
@@ -256,9 +348,11 @@ class CallManager {
         });
 
         this.showActiveCall("Calling...");
+        this.playRingtone("outgoing", type);
     }
 
     async answer(data) {
+        this.stopRingtone();
         this.activeUser = data.from;
         this.callType = data.type;
         this.callId = data.callId;
@@ -301,6 +395,7 @@ class CallManager {
                 : (data.type === "video" ? "Video" : "Voice");
 
             this.callId = data.callId;
+            this.playRingtone("incoming", data.type);
             this.showPanel(`
                 <div class="incoming-call-card">
                     <span class="incoming-call-badge">${incomingLabel}</span>
@@ -323,6 +418,7 @@ class CallManager {
             };
 
             document.getElementById("declineCallBtn").onclick = () => {
+                this.stopRingtone();
                 this.socket.emit("end-call", {
                     from: username,
                     to: data.from,
@@ -335,6 +431,7 @@ class CallManager {
 
         this.socket.on("call-answered", async (data) => {
             if (this.peer) {
+                this.stopRingtone();
                 await this.peer.setRemoteDescription(data.answer);
                 this.showActiveCall("Call connected");
                 this.updateCallStatus("Connected", "connected");
@@ -394,12 +491,13 @@ class CallManager {
             media.id = "remoteCallMedia";
             media.autoplay = true;
             media.playsInline = true;
-            media.controls = true;
+            media.controls = false;
             media.className = "remote-call-media";
             mediaArea.appendChild(media);
         }
 
         media.srcObject = this.remoteStream;
+        this.renderAudioPlaceholder(mediaArea, "Remote audio");
     }
 
     attachLocalMedia() {
@@ -420,6 +518,25 @@ class CallManager {
         media.className = "local-call-media";
         media.srcObject = this.localStream;
         preview.appendChild(media);
+        this.renderAudioPlaceholder(preview, "Your microphone", hasVideo);
+    }
+
+    renderAudioPlaceholder(container, label, hasVideo = ["video", "screen"].includes(this.callType)) {
+        if (!container || hasVideo) {
+            return;
+        }
+
+        if (container.querySelector(".call-audio-placeholder")) {
+            return;
+        }
+
+        container.insertAdjacentHTML("beforeend", `
+            <div class="call-audio-placeholder">
+                <span class="call-wave"><i></i><i></i><i></i><i></i></span>
+                <strong>${label}</strong>
+                <small>Audio is active</small>
+            </div>
+        `);
     }
 
     updateCallControls() {
@@ -488,6 +605,7 @@ class CallManager {
     }
 
     cleanup(hidePanel = true) {
+        this.stopRingtone();
         this.stopTimer();
         this.localStream?.getTracks().forEach((track) => track.stop());
         this.peer?.close();

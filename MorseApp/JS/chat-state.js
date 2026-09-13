@@ -64,17 +64,25 @@ function renderCurrentUserInfo() {
 renderCurrentUserInfo();
 
 const socket = io(SERVER_URL, {
+    transports: ["websocket", "polling"],
+    upgrade: true,
     auth: {
         token
     }
 });
 
 socket.on("connect_error", (error) => {
-    console.error("Socket authentication failed:", error.message);
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("avatar");
-    window.location = "login.html";
+    const message = String(error?.message || "");
+    const isAuthFailure = /auth|token|unauthorized|forbidden/i.test(message);
+
+    console.error("Socket connection failed:", message);
+
+    if (isAuthFailure) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("username");
+        localStorage.removeItem("avatar");
+        window.location = "login.html";
+    }
 });
 
 socket.on("connect", () => {

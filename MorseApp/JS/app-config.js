@@ -1,4 +1,4 @@
 window.MORSE_CHAT_CONFIG = {
-    serverUrl: "http://localhost:3000",
-    environment: "development"
+    serverUrl: "https://morse-chat-pro.onrender.com",
+    environment: "production"
 };
