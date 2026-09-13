@@ -37,3 +37,5 @@ MorseApp/android/.gradle/
 MorseApp/android/build/
 MorseApp/android/app/build/
 MorseApp/www/
+MorseApp/android/keystore.properties
+MorseApp/android/release/

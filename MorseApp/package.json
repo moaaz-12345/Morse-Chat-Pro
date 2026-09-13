@@ -24,6 +24,14 @@
     "appId": "com.morsechatpro.app",
     "productName": "Morse Chat Pro",
     "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "moaaz-12345",
+        "repo": "Morse-Chat-Pro",
+        "releaseType": "release"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -70,6 +78,7 @@
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "electron-updater": "^6.8.9",
     "socket.io-client": "^4.8.3"
   }
 }
