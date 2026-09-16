@@ -176,6 +176,10 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+.remote-call-preview.has-video .call-audio-placeholder {
+    display: none;
+}
+
 .local-call-media,
 .remote-call-media {
     width: 100%;
@@ -204,6 +208,19 @@ audio.remote-call-media {
     height: 1px;
     opacity: 0;
     pointer-events: none;
+}
+
+.call-media-unlock {
+    position: absolute;
+    inset: auto 14px 14px 14px;
+    z-index: 5;
+    padding: 12px 14px;
+    color: #fff;
+    background: rgba(109, 93, 252, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+    font-weight: 800;
 }
 
 .call-audio-placeholder {

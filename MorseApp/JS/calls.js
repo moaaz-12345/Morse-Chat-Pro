@@ -275,6 +275,7 @@ class CallManager {
         peer.ontrack = (event) => {
             this.remoteStream = event.streams[0];
             this.attachRemoteMedia();
+            this.updateCallControls();
         };
 
         peer.onconnectionstatechange = () => {
@@ -310,8 +311,18 @@ class CallManager {
         }
 
         this.localStream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            },
             video: type === "video"
+                ? {
+                    facingMode: "user",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+                : false
         });
 
         return this.localStream;
@@ -479,14 +490,20 @@ class CallManager {
     attachRemoteMedia() {
         const mediaArea = document.getElementById("remoteCallPreview");
 
-        if (!mediaArea) {
+        if (!mediaArea || !this.remoteStream) {
             return;
         }
 
+        const hasVideo = this.remoteStream.getVideoTracks().some((track) => track.readyState !== "ended");
+        const expectedTag = hasVideo ? "VIDEO" : "AUDIO";
         let media = document.getElementById("remoteCallMedia");
 
+        if (media && media.tagName !== expectedTag) {
+            media.remove();
+            media = null;
+        }
+
         if (!media) {
-            const hasVideo = ["video", "screen"].includes(this.callType);
             media = document.createElement(hasVideo ? "video" : "audio");
             media.id = "remoteCallMedia";
             media.autoplay = true;
@@ -496,8 +513,20 @@ class CallManager {
             mediaArea.appendChild(media);
         }
 
+        media.muted = false;
+        media.volume = 1;
         media.srcObject = this.remoteStream;
-        this.renderAudioPlaceholder(mediaArea, "Remote audio");
+
+        mediaArea.classList.toggle("has-video", hasVideo);
+        mediaArea.querySelector(".call-audio-placeholder")?.remove();
+
+        if (hasVideo) {
+            mediaArea.querySelector(".call-media-unlock")?.remove();
+        } else {
+            this.renderAudioPlaceholder(mediaArea, "Remote audio", false);
+        }
+
+        this.playMediaElement(media, mediaArea, hasVideo ? "Tap to show video" : "Tap to play audio");
     }
 
     attachLocalMedia() {
@@ -519,6 +548,7 @@ class CallManager {
         media.srcObject = this.localStream;
         preview.appendChild(media);
         this.renderAudioPlaceholder(preview, "Your microphone", hasVideo);
+        this.playMediaElement(media, preview, "Tap to start preview");
     }
 
     renderAudioPlaceholder(container, label, hasVideo = ["video", "screen"].includes(this.callType)) {
@@ -537,6 +567,43 @@ class CallManager {
                 <small>Audio is active</small>
             </div>
         `);
+    }
+
+    playMediaElement(media, container, label) {
+        if (!media || !container) {
+            return;
+        }
+
+        const tryPlay = () => {
+            const result = media.play?.();
+
+            if (result && typeof result.catch === "function") {
+                result
+                    .then(() => {
+                        container.querySelector(".call-media-unlock")?.remove();
+                    })
+                    .catch(() => {
+                        if (container.querySelector(".call-media-unlock")) {
+                            return;
+                        }
+
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = "call-media-unlock";
+                        button.textContent = label;
+                        button.onclick = () => {
+                            media.play?.().then(() => button.remove()).catch(() => {});
+                        };
+                        container.appendChild(button);
+                    });
+            }
+        };
+
+        if (media.readyState >= 2) {
+            tryPlay();
+        } else {
+            media.onloadedmetadata = tryPlay;
+        }
     }
 
     updateCallControls() {
