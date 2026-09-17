@@ -6,6 +6,19 @@ const isProduction = mode === "production";
 const serverUrl = process.env.MORSE_SERVER_URL || (isProduction
     ? "https://your-production-backend.example.com"
     : "http://localhost:3000");
+const turnUrls = (process.env.MORSE_TURN_URLS || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+const turnUsername = process.env.MORSE_TURN_USERNAME || "";
+const turnCredential = process.env.MORSE_TURN_CREDENTIAL || "";
+const turnServers = turnUrls.length
+    ? [{
+        urls: turnUrls,
+        ...(turnUsername ? { username: turnUsername } : {}),
+        ...(turnCredential ? { credential: turnCredential } : {})
+    }]
+    : [];
 
 if (isProduction && serverUrl.includes("your-production-backend.example.com")) {
     throw new Error("MORSE_SERVER_URL must be set before creating a production build.");
@@ -14,7 +27,8 @@ if (isProduction && serverUrl.includes("your-production-backend.example.com")) {
 const target = path.resolve(__dirname, "..", "JS", "app-config.js");
 const content = `window.MORSE_CHAT_CONFIG = {
     serverUrl: ${JSON.stringify(serverUrl.replace(/\/$/, ""))},
-    environment: ${JSON.stringify(isProduction ? "production" : "development")}
+    environment: ${JSON.stringify(isProduction ? "production" : "development")},
+    turnServers: ${JSON.stringify(turnServers, null, 4)}
 };
 `;
 

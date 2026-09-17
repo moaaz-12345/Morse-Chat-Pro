@@ -16,11 +16,10 @@ class CallManager {
         this.ringtoneTimer = null;
         this.ringtoneGain = null;
         this.videoFallbackTimer = null;
+        this.reconnectTimer = null;
         this.videoFallbackCanvas = document.createElement("canvas");
         this.lastRemoteVideoFrameAt = 0;
-        this.preferFrameVideo = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-            || document.documentElement.classList.contains("is-capacitor")
-            || document.body.classList.contains("is-capacitor");
+        this.remoteVideoHealthy = false;
         this.bindSignalingEvents();
     }
 
@@ -261,9 +260,15 @@ class CallManager {
     }
 
     createPeer() {
+        const configuredTurnServers = Array.isArray(window.MORSE_CHAT_CONFIG?.turnServers)
+            ? window.MORSE_CHAT_CONFIG.turnServers
+            : [];
+
         const peer = new RTCPeerConnection({
             iceServers: [
-                { urls: "stun:stun.l.google.com:19302" }
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:global.stun.twilio.com:3478" },
+                ...configuredTurnServers
             ]
         });
 
@@ -285,7 +290,24 @@ class CallManager {
         };
 
         peer.onconnectionstatechange = () => {
-            if (["failed", "closed", "disconnected"].includes(peer.connectionState)) {
+            clearTimeout(this.reconnectTimer);
+
+            if (peer.connectionState === "disconnected") {
+                this.updateCallStatus("Reconnecting", "ringing");
+                this.reconnectTimer = setTimeout(() => {
+                    if (this.peer === peer && peer.connectionState === "disconnected") {
+                        this.cleanup(false);
+                    }
+                }, 12000);
+                return;
+            }
+
+            if (peer.connectionState === "connected") {
+                this.updateCallStatus("Connected", "connected");
+                return;
+            }
+
+            if (["failed", "closed"].includes(peer.connectionState)) {
                 this.cleanup(false);
             }
         };
@@ -325,8 +347,9 @@ class CallManager {
             video: type === "video"
                 ? {
                     facingMode: "user",
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 640, max: 960 },
+                    height: { ideal: 480, max: 540 },
+                    frameRate: { ideal: 24, max: 30 }
                 }
                 : false
         });
@@ -348,6 +371,7 @@ class CallManager {
         this.activeUser = targetUser;
         this.callType = type;
         this.callId = crypto.randomUUID();
+        this.remoteVideoHealthy = false;
 
         const peer = this.createPeer();
         const stream = await this.getLocalMedia(type, "caller");
@@ -373,6 +397,7 @@ class CallManager {
         this.activeUser = data.from;
         this.callType = data.type;
         this.callId = data.callId;
+        this.remoteVideoHealthy = false;
 
         const peer = this.createPeer();
         const stream = await this.getLocalMedia(data.type, "callee");
@@ -518,7 +543,7 @@ class CallManager {
             media = null;
         }
 
-        if (hasVideo && !this.preferFrameVideo && !media) {
+        if (hasVideo && !media) {
             media = document.createElement("video");
             media.id = "remoteCallMedia";
             media.autoplay = true;
@@ -531,16 +556,16 @@ class CallManager {
         mediaArea.classList.toggle("has-video", hasVideo);
         mediaArea.querySelector(".call-audio-placeholder")?.remove();
 
-        if (hasVideo && !this.preferFrameVideo) {
+        if (hasVideo) {
             const videoOnlyStream = new MediaStream(videoTracks);
             media.muted = true;
             media.volume = 0;
             media.srcObject = videoOnlyStream;
             mediaArea.querySelector(".call-media-unlock")?.remove();
+            media.addEventListener("playing", () => this.markRemoteVideoHealthy(mediaArea), { once: true });
+            media.addEventListener("loadeddata", () => this.markRemoteVideoHealthy(mediaArea), { once: true });
             this.playMediaElement(media, mediaArea, "Tap to show video");
-        } else if (hasVideo && this.preferFrameVideo) {
-            media?.remove();
-            this.renderVideoFramePlaceholder(mediaArea);
+            this.renderVideoFramePlaceholder(mediaArea, "Connecting direct video");
         } else {
             media?.remove();
             this.renderAudioPlaceholder(mediaArea, "Remote audio", false);
@@ -603,14 +628,14 @@ class CallManager {
         this.stopVideoFallback();
 
         this.videoFallbackTimer = setInterval(() => {
-            if (!this.activeUser || !this.callId || this.callType !== "video" || !localVideo.videoWidth) {
+            if (!this.activeUser || !this.callId || this.callType !== "video" || !localVideo.videoWidth || this.remoteVideoHealthy) {
                 return;
             }
 
             const canvas = this.videoFallbackCanvas;
             const sourceRatio = localVideo.videoWidth / Math.max(localVideo.videoHeight, 1);
-            canvas.width = 260;
-            canvas.height = Math.max(180, Math.min(360, Math.round(canvas.width / sourceRatio)));
+            canvas.width = 180;
+            canvas.height = Math.max(128, Math.min(260, Math.round(canvas.width / sourceRatio)));
             const context = canvas.getContext("2d", { willReadFrequently: false });
 
             if (!context) {
@@ -618,7 +643,7 @@ class CallManager {
             }
 
             context.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-            const frame = canvas.toDataURL("image/jpeg", 0.46);
+            const frame = canvas.toDataURL("image/jpeg", 0.38);
 
             this.socket.emit("call-video-frame", {
                 from: username,
@@ -626,7 +651,7 @@ class CallManager {
                 callId: this.callId,
                 frame
             });
-        }, 850);
+        }, 1800);
     }
 
     stopVideoFallback() {
@@ -659,10 +684,10 @@ class CallManager {
 
         const video = document.getElementById("remoteCallMedia");
 
-        if (!this.preferFrameVideo && video && video.tagName === "VIDEO") {
+        if (video && video.tagName === "VIDEO") {
             const hideFallbackIfVideoWorks = () => {
                 if (video.readyState >= 2 && !video.paused && video.videoWidth > 0) {
-                    mediaArea.classList.remove("has-fallback-frame");
+                    this.markRemoteVideoHealthy(mediaArea);
                 }
             };
 
@@ -670,7 +695,13 @@ class CallManager {
         }
     }
 
-    renderVideoFramePlaceholder(container) {
+    markRemoteVideoHealthy(mediaArea = document.getElementById("remoteCallPreview")) {
+        this.remoteVideoHealthy = true;
+        mediaArea?.classList.remove("has-fallback-frame");
+        mediaArea?.querySelector(".call-video-waiting")?.remove();
+    }
+
+    renderVideoFramePlaceholder(container, label = "Waiting for remote camera") {
         if (!container || container.querySelector(".call-video-waiting")) {
             return;
         }
@@ -678,8 +709,8 @@ class CallManager {
         container.insertAdjacentHTML("beforeend", `
             <div class="call-video-waiting">
                 <span class="call-wave"><i></i><i></i><i></i><i></i></span>
-                <strong>Waiting for remote camera</strong>
-                <small>Using mobile-safe video mode</small>
+                <strong>${label}</strong>
+                <small>WebRTC direct stream is active</small>
             </div>
         `);
     }
@@ -808,6 +839,7 @@ class CallManager {
         this.stopRingtone();
         this.stopTimer();
         this.stopVideoFallback();
+        clearTimeout(this.reconnectTimer);
         this.localStream?.getTracks().forEach((track) => track.stop());
         this.peer?.close();
         document.getElementById("remoteCallMedia")?.remove();
@@ -825,6 +857,8 @@ class CallManager {
         this.callType = null;
         this.callId = null;
         this.callStartedAt = null;
+        this.remoteVideoHealthy = false;
+        this.reconnectTimer = null;
     }
 }
 
