@@ -18,6 +18,9 @@ class CallManager {
         this.videoFallbackTimer = null;
         this.videoFallbackCanvas = document.createElement("canvas");
         this.lastRemoteVideoFrameAt = 0;
+        this.preferFrameVideo = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+            || document.documentElement.classList.contains("is-capacitor")
+            || document.body.classList.contains("is-capacitor");
         this.bindSignalingEvents();
     }
 
@@ -515,7 +518,7 @@ class CallManager {
             media = null;
         }
 
-        if (hasVideo && !media) {
+        if (hasVideo && !this.preferFrameVideo && !media) {
             media = document.createElement("video");
             media.id = "remoteCallMedia";
             media.autoplay = true;
@@ -528,13 +531,16 @@ class CallManager {
         mediaArea.classList.toggle("has-video", hasVideo);
         mediaArea.querySelector(".call-audio-placeholder")?.remove();
 
-        if (hasVideo) {
+        if (hasVideo && !this.preferFrameVideo) {
             const videoOnlyStream = new MediaStream(videoTracks);
             media.muted = true;
             media.volume = 0;
             media.srcObject = videoOnlyStream;
             mediaArea.querySelector(".call-media-unlock")?.remove();
             this.playMediaElement(media, mediaArea, "Tap to show video");
+        } else if (hasVideo && this.preferFrameVideo) {
+            media?.remove();
+            this.renderVideoFramePlaceholder(mediaArea);
         } else {
             media?.remove();
             this.renderAudioPlaceholder(mediaArea, "Remote audio", false);
@@ -602,8 +608,9 @@ class CallManager {
             }
 
             const canvas = this.videoFallbackCanvas;
-            canvas.width = 240;
-            canvas.height = 180;
+            const sourceRatio = localVideo.videoWidth / Math.max(localVideo.videoHeight, 1);
+            canvas.width = 260;
+            canvas.height = Math.max(180, Math.min(360, Math.round(canvas.width / sourceRatio)));
             const context = canvas.getContext("2d", { willReadFrequently: false });
 
             if (!context) {
@@ -648,10 +655,11 @@ class CallManager {
 
         fallback.src = frame;
         mediaArea.classList.add("has-fallback-frame");
+        mediaArea.querySelector(".call-video-waiting")?.remove();
 
         const video = document.getElementById("remoteCallMedia");
 
-        if (video && video.tagName === "VIDEO") {
+        if (!this.preferFrameVideo && video && video.tagName === "VIDEO") {
             const hideFallbackIfVideoWorks = () => {
                 if (video.readyState >= 2 && !video.paused && video.videoWidth > 0) {
                     mediaArea.classList.remove("has-fallback-frame");
@@ -660,6 +668,20 @@ class CallManager {
 
             setTimeout(hideFallbackIfVideoWorks, 1200);
         }
+    }
+
+    renderVideoFramePlaceholder(container) {
+        if (!container || container.querySelector(".call-video-waiting")) {
+            return;
+        }
+
+        container.insertAdjacentHTML("beforeend", `
+            <div class="call-video-waiting">
+                <span class="call-wave"><i></i><i></i><i></i><i></i></span>
+                <strong>Waiting for remote camera</strong>
+                <small>Using mobile-safe video mode</small>
+            </div>
+        `);
     }
 
     renderAudioPlaceholder(container, label, hasVideo = ["video", "screen"].includes(this.callType)) {

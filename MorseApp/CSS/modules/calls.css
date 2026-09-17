@@ -212,6 +212,33 @@
     opacity: 0;
 }
 
+.call-video-waiting {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    padding: 18px;
+    text-align: center;
+    background:
+        radial-gradient(circle at center, rgba(109, 93, 252, 0.2), transparent 62%),
+        rgba(15, 23, 42, 0.86);
+}
+
+.call-video-waiting strong {
+    font-size: 0.95rem;
+}
+
+.call-video-waiting small {
+    color: var(--muted);
+    font-size: 0.76rem;
+}
+
+.remote-call-preview.has-fallback-frame .call-video-waiting {
+    display: none;
+}
+
 .local-call-media {
     min-height: 78px;
     max-height: 170px;
