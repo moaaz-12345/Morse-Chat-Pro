@@ -433,6 +433,21 @@ function registerChatSocket(io, messageStore) {
             }
         });
 
+        socket.on("call-video-frame", (data = {}) => {
+            const targetUser = users.find((user) => user.username === sanitizeText(data?.to || "", 32));
+            const frame = typeof data.frame === "string" ? data.frame : "";
+
+            if (!targetUser || !frame.startsWith("data:image/jpeg;base64,") || frame.length > 180000) {
+                return;
+            }
+
+            io.to(targetUser.id).emit("call-video-frame", {
+                from: socket.user?.username || sanitizeText(data?.from || "", 32),
+                callId: sanitizeMessageId(data?.callId || ""),
+                frame
+            });
+        });
+
         socket.on("end-call", async (data) => {
             data = {
                 ...data,

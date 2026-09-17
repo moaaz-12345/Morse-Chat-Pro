@@ -193,6 +193,25 @@
     object-fit: cover;
 }
 
+.remote-fallback-frame {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: none;
+    object-fit: cover;
+    background: #020617;
+}
+
+.remote-call-preview.has-fallback-frame .remote-fallback-frame {
+    display: block;
+}
+
+.remote-call-preview.has-fallback-frame .remote-call-media {
+    opacity: 0;
+}
+
 .local-call-media {
     min-height: 78px;
     max-height: 170px;

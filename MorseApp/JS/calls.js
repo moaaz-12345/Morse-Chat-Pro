@@ -15,6 +15,9 @@ class CallManager {
         this.ringtoneContext = null;
         this.ringtoneTimer = null;
         this.ringtoneGain = null;
+        this.videoFallbackTimer = null;
+        this.videoFallbackCanvas = document.createElement("canvas");
+        this.lastRemoteVideoFrameAt = 0;
         this.bindSignalingEvents();
     }
 
@@ -456,6 +459,14 @@ class CallManager {
             }
         });
 
+        this.socket.on("call-video-frame", (data) => {
+            if (!this.callId || data?.callId !== this.callId || data?.from !== this.activeUser || !data?.frame) {
+                return;
+            }
+
+            this.showRemoteFallbackFrame(data.frame);
+        });
+
         this.socket.on("call-ended", (data) => {
             const durationSeconds = data?.durationSeconds || 0;
             this.cleanup(false);
@@ -576,6 +587,79 @@ class CallManager {
         preview.appendChild(media);
         this.renderAudioPlaceholder(preview, "Your microphone", hasVideo);
         this.playMediaElement(media, preview, "Tap to start preview");
+
+        if (hasVideo) {
+            this.startVideoFallback(media);
+        }
+    }
+
+    startVideoFallback(localVideo) {
+        this.stopVideoFallback();
+
+        this.videoFallbackTimer = setInterval(() => {
+            if (!this.activeUser || !this.callId || this.callType !== "video" || !localVideo.videoWidth) {
+                return;
+            }
+
+            const canvas = this.videoFallbackCanvas;
+            canvas.width = 240;
+            canvas.height = 180;
+            const context = canvas.getContext("2d", { willReadFrequently: false });
+
+            if (!context) {
+                return;
+            }
+
+            context.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
+            const frame = canvas.toDataURL("image/jpeg", 0.46);
+
+            this.socket.emit("call-video-frame", {
+                from: username,
+                to: this.activeUser,
+                callId: this.callId,
+                frame
+            });
+        }, 850);
+    }
+
+    stopVideoFallback() {
+        clearInterval(this.videoFallbackTimer);
+        this.videoFallbackTimer = null;
+    }
+
+    showRemoteFallbackFrame(frame) {
+        const mediaArea = document.getElementById("remoteCallPreview");
+
+        if (!mediaArea) {
+            return;
+        }
+
+        this.lastRemoteVideoFrameAt = Date.now();
+
+        let fallback = document.getElementById("remoteFallbackFrame");
+
+        if (!fallback) {
+            fallback = document.createElement("img");
+            fallback.id = "remoteFallbackFrame";
+            fallback.className = "remote-fallback-frame";
+            fallback.alt = "Remote camera fallback";
+            mediaArea.appendChild(fallback);
+        }
+
+        fallback.src = frame;
+        mediaArea.classList.add("has-fallback-frame");
+
+        const video = document.getElementById("remoteCallMedia");
+
+        if (video && video.tagName === "VIDEO") {
+            const hideFallbackIfVideoWorks = () => {
+                if (video.readyState >= 2 && !video.paused && video.videoWidth > 0) {
+                    mediaArea.classList.remove("has-fallback-frame");
+                }
+            };
+
+            setTimeout(hideFallbackIfVideoWorks, 1200);
+        }
     }
 
     renderAudioPlaceholder(container, label, hasVideo = ["video", "screen"].includes(this.callType)) {
@@ -701,10 +785,12 @@ class CallManager {
     cleanup(hidePanel = true) {
         this.stopRingtone();
         this.stopTimer();
+        this.stopVideoFallback();
         this.localStream?.getTracks().forEach((track) => track.stop());
         this.peer?.close();
         document.getElementById("remoteCallMedia")?.remove();
         document.getElementById("remoteCallAudio")?.remove();
+        document.getElementById("remoteFallbackFrame")?.remove();
 
         if (hidePanel) {
             this.hidePanel();
