@@ -202,7 +202,8 @@
 }
 
 audio.local-call-media,
-audio.remote-call-media {
+audio.remote-call-media,
+.remote-call-audio {
     position: absolute;
     width: 1px;
     height: 1px;

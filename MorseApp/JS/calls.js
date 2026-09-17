@@ -494,17 +494,18 @@ class CallManager {
             return;
         }
 
-        const hasVideo = this.remoteStream.getVideoTracks().some((track) => track.readyState !== "ended");
-        const expectedTag = hasVideo ? "VIDEO" : "AUDIO";
+        const videoTracks = this.remoteStream.getVideoTracks().filter((track) => track.readyState !== "ended");
+        const audioTracks = this.remoteStream.getAudioTracks().filter((track) => track.readyState !== "ended");
+        const hasVideo = videoTracks.length > 0;
         let media = document.getElementById("remoteCallMedia");
 
-        if (media && media.tagName !== expectedTag) {
+        if (media && media.tagName !== "VIDEO") {
             media.remove();
             media = null;
         }
 
-        if (!media) {
-            media = document.createElement(hasVideo ? "video" : "audio");
+        if (hasVideo && !media) {
+            media = document.createElement("video");
             media.id = "remoteCallMedia";
             media.autoplay = true;
             media.playsInline = true;
@@ -513,20 +514,46 @@ class CallManager {
             mediaArea.appendChild(media);
         }
 
-        media.muted = false;
-        media.volume = 1;
-        media.srcObject = this.remoteStream;
-
         mediaArea.classList.toggle("has-video", hasVideo);
         mediaArea.querySelector(".call-audio-placeholder")?.remove();
 
         if (hasVideo) {
+            const videoOnlyStream = new MediaStream(videoTracks);
+            media.muted = true;
+            media.volume = 0;
+            media.srcObject = videoOnlyStream;
             mediaArea.querySelector(".call-media-unlock")?.remove();
+            this.playMediaElement(media, mediaArea, "Tap to show video");
         } else {
+            media?.remove();
             this.renderAudioPlaceholder(mediaArea, "Remote audio", false);
         }
 
-        this.playMediaElement(media, mediaArea, hasVideo ? "Tap to show video" : "Tap to play audio");
+        this.attachRemoteAudio(audioTracks, mediaArea);
+    }
+
+    attachRemoteAudio(audioTracks, mediaArea) {
+        let audio = document.getElementById("remoteCallAudio");
+
+        if (!audioTracks.length) {
+            audio?.remove();
+            return;
+        }
+
+        if (!audio) {
+            audio = document.createElement("audio");
+            audio.id = "remoteCallAudio";
+            audio.autoplay = true;
+            audio.playsInline = true;
+            audio.controls = false;
+            audio.className = "remote-call-audio";
+            mediaArea.appendChild(audio);
+        }
+
+        audio.muted = false;
+        audio.volume = 1;
+        audio.srcObject = new MediaStream(audioTracks);
+        this.playMediaElement(audio, mediaArea, "Tap to play audio");
     }
 
     attachLocalMedia() {
@@ -677,6 +704,7 @@ class CallManager {
         this.localStream?.getTracks().forEach((track) => track.stop());
         this.peer?.close();
         document.getElementById("remoteCallMedia")?.remove();
+        document.getElementById("remoteCallAudio")?.remove();
 
         if (hidePanel) {
             this.hidePanel();
